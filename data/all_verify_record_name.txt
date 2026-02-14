@@ -1,0 +1,10 @@
+ahrefs
+apple
+applebot
+babbar
+facebook
+google
+googlebot
+msn
+pingdom
+uptimerobot

@@ -1,0 +1,17 @@
+facebook=https://www.facebook.com/peering/geofeed
+google=https://developers.google.com/static/search/apis/ipranges/googlebot.json
+bing=https://www.bing.com/toolbox/bingbot.json
+duckduckgo=https://duckduckgo.com/duckduckbot.json
+ahrefs=https://api.ahrefs.com/v3/public/crawler-ip-ranges
+commoncrawl=https://index.commoncrawl.org/ccbot.json
+telegram=https://core.telegram.org/resources/cidr.txt
+yandex=https://yandex.com/ips
+uptimerobot=https://uptimerobot.com/inc/files/ips/IPv4andIPv6.txt
+pingdom=https://my.pingdom.com/probes/ipv4
+openai=https://openai.com/searchbot.json
+gptbot=https://openai.com/gptbot.json
+chatgpt-user=https://openai.com/chatgpt-user.json
+amazonbot=https://developer.amazon.com/amazonbot/searchbot-ip-addresses/
+applebot=https://search.developer.apple.com/applebot.json
+barkrowler=https://www.babbar.tech/barkrowler-ip-ranges.json
+seekport=https://bot.seekport.com/seekportbot_ips.txt
