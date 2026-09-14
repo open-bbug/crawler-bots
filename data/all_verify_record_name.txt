@@ -1,4 +1,5 @@
 ahrefs
+amazon
 apple
 applebot
 babbar
