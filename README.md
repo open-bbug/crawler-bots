@@ -28,6 +28,14 @@ This project automates the retrieval and maintenance of IP whitelists for major 
 | AppleBot | JSON | Active |
 | Barkrowler | JSON | Active |
 | Seekport | Text | Active |
+| ClaudeBot / Claude-User / Claude-SearchBot | JSON | Active |
+| PerplexityBot | JSON | Active |
+| Perplexity-User | JSON | Active |
+| MistralAI-User | JSON | Active |
+| MistralAI-Index | JSON | Active |
+| DuckAssistBot | JSON | Active |
+| Google Special Crawlers (GoogleOther, Google-CloudVertexBot) | JSON | Active |
+| Google User-Triggered Fetchers (Google-NotebookLM, GoogleAgent-Mariner) | JSON | Active |
 | Yandex | HTML | Skipped (HTML parsing/protection) |
 
 ## Project Structure
@@ -83,9 +91,8 @@ The project includes a GitHub Action ([`.github/workflows/update_ips.yml`](.gith
 ## Contributing
 
 To add a new provider:
-To add a new provider:
 1. Add the provider and its URL to `providers/providers.txt` (format: `provider_name=https://url...`).
 2. Add verification keywords to `providers/record_name.txt` if needed.
 3. In `scripts/update_ips.py`:
-    - Implement a `parse_<provider>` function.
+    - Implement a `parse_<provider>` function (or reuse `parse_prefixes` for the standard `{"prefixes": [{"ipv4Prefix": ...}]}` format).
     - Add the parser to the `PARSERS` dictionary.
