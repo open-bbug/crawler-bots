@@ -258,6 +258,36 @@ def parse_seekport(content):
              ips.append(line)
     return ips
 
+def parse_prefixes(content):
+    # Standard Google-style format: {"prefixes": [{"ipv4Prefix": ...}, {"ipv6Prefix": ...}]}
+    data = json.loads(content)
+    ips = []
+    if "prefixes" in data:
+        for item in data["prefixes"]:
+            if "ipv4Prefix" in item:
+                ips.append(item["ipv4Prefix"])
+            if "ipv6Prefix" in item:
+                ips.append(item["ipv6Prefix"])
+    return ips
+
+def parse_claudebot(content):
+    # Anthropic publishes one list covering ClaudeBot, Claude-User and Claude-SearchBot.
+    # The schema is not documented, so collect every string in the JSON that is a valid IP/CIDR.
+    ips = []
+
+    def walk(node):
+        if isinstance(node, dict):
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+        elif isinstance(node, str) and validate_ip(node):
+            ips.append(node)
+
+    walk(json.loads(content))
+    return ips
+
 PARSERS = {
     "facebook": parse_facebook,
     "google": parse_google,
@@ -275,7 +305,16 @@ PARSERS = {
     "amazonbot": parse_amazonbot,
     "applebot": parse_applebot,
     "barkrowler": parse_barkrowler,
-    "seekport": parse_seekport
+    "seekport": parse_seekport,
+    "claudebot": parse_claudebot,
+    "perplexitybot": parse_prefixes,
+    "perplexity-user": parse_prefixes,
+    "mistralai-user": parse_prefixes,
+    "mistralai-index": parse_prefixes,
+    "duckassistbot": parse_prefixes,
+    "google-special": parse_prefixes,
+    "google-user-fetchers": parse_prefixes,
+    "google-user-fetchers-google": parse_prefixes
 }
 
 def validate_ip(ip_str):
