@@ -74,17 +74,6 @@ def parse_facebook(content):
     ips.extend(re.findall(cidr_pattern, content))
     return ips
 
-def parse_telegram(content):
-    ips = []
-    for line in content.splitlines():
-        line = line.strip()
-        if not line: continue
-        # Check if line looks like a CIDR
-        if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2}$', line) or \
-           re.match(r'^[a-fA-F0-9:]+/\d{1,3}$', line):
-            ips.append(line)
-    return ips
-
 def parse_yandex(content):
     # https://yandex.com/ips is an HTML page listing Yandex's CIDR ranges (IPv4 and IPv6).
     # Strip the markup and collect every CIDR; require an explicit /prefix so stray numbers
@@ -98,15 +87,6 @@ def parse_yandex(content):
             print("Yandex: returned a captcha page, no CIDR ranges found.")
         else:
             print("Yandex: no CIDR ranges found in page (format may have changed).")
-    return ips
-
-def parse_uptimerobot(content):
-    ips = []
-    for line in content.splitlines():
-        line = line.strip()
-        if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:/\d{1,2})?$', line) or \
-           re.match(r'^[a-fA-F0-9:]+(?:/\d{1,3})?$', line):
-            ips.append(line)
     return ips
 
 def parse_amazonbot(content):
@@ -193,9 +173,9 @@ PARSERS = {
     "duckduckgo": parse_prefixes,
     "ahrefs": parse_prefixes,
     "commoncrawl": parse_prefixes,
-    "telegram": parse_telegram,
+    "telegram": parse_plain_ips,
     "yandex": parse_yandex,
-    "uptimerobot": parse_uptimerobot,
+    "uptimerobot": parse_plain_ips,
     "pingdom": parse_plain_ips,
     "openai": parse_prefixes,
     "gptbot": parse_prefixes,
