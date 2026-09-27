@@ -10,12 +10,12 @@
 # *.googleusercontent.com) lets cloud-hosted machines pass.
 
 ahrefs
-amazon
+amazonbot    # Amazonbot rDNS: crawl.amazonbot.amazon
 apple
 applebot
 babbar
 facebook
-google
+google.com   # Google special crawlers / fetchers: *.google.com
 googlebot
 msn
 pingdom
