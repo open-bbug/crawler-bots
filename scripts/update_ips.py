@@ -11,9 +11,7 @@ import html
 import os
 import ipaddress
 import re
-import random
 
-import socket
 
 # Configuration
 # Configuration
@@ -39,7 +37,10 @@ def load_keywords(filename):
     keywords = []
     if os.path.exists(filename):
         with open(filename, 'r') as f:
-            keywords = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+            for line in f:
+                line = line.split('#', 1)[0].strip()
+                if line:
+                    keywords.append(line)
     return keywords
 
 PROVIDERS = load_providers(PROVIDERS_FILE)
@@ -343,72 +344,12 @@ def validate_ip(ip_str):
     except ValueError:
         return False
 
-def verify_ip(ip_address):
-    """
-    Performs reverse DNS lookup on the accessing IP address.
-    Reads DNS record and extracts crawler keywords (e.g., googlebot) to a whitelist.
-    """
-    # Keywords to look for in the hostname
-    keywords = KEYWORDS
-    
-    try:
-        # Reverse DNS lookup
-        hostname, _, _ = socket.gethostbyaddr(ip_address)
-        print(f"Hostname for {ip_address}: {hostname}")
-        
-        found_keywords = []
-        for keyword in keywords:
-            if keyword in hostname.lower():
-                found_keywords.append(keyword)
-        
-        if found_keywords:
-            # Ensure data directory exists
-            if not os.path.exists(DATA_DIR):
-                os.makedirs(DATA_DIR)
-
-            # Read existing records
-            existing_records = set()
-            if os.path.exists(VERIFY_FILE):
-                with open(VERIFY_FILE, 'r') as f:
-                    existing_records = set(line.strip() for line in f if line.strip())
-            
-            # Update records
-            new_records = existing_records.union(set(found_keywords))
-            
-            # Write back if changed
-            if len(new_records) > len(existing_records):
-                with open(VERIFY_FILE, 'w') as f:
-                    f.write('\n'.join(sorted(list(new_records))))
-                print(f"Added keywords {found_keywords} to {VERIFY_FILE}")
-            else:
-                print(f"Keywords {found_keywords} already in {VERIFY_FILE}")
-        else:
-             print(f"No crawler keywords found in hostname: {hostname}")
-
-        return found_keywords
-
-    except socket.herror:
-        print(f"No PTR record found for {ip_address}")
-        return []
-    except Exception as e:
-        print(f"Error verifying IP {ip_address}: {e}")
-        return []
-
-def verify_sample(provider, valid_ips):
-    # Verify one random IP from the first entry to extract reverse-DNS keywords
-    try:
-        first_entry = valid_ips[0]
-        net = ipaddress.ip_network(first_entry, strict=False)
-        # Pick a random IP from the subnet (single IPs /32 or /128 have one address)
-        num_addrs = net.num_addresses
-        if num_addrs > 1:
-            target_ip = str(net[random.randint(0, num_addrs - 1)])
-        else:
-            target_ip = str(net.network_address)
-        print(f"  Verifying random sample IP: {target_ip} (from {first_entry})...")
-        verify_ip(target_ip)
-    except Exception as e:
-        print(f"  Error verifying first IP for {provider}: {e}")
+def write_verify_records():
+    """Publish the manually maintained rDNS keywords as data/all_verify_record_name.txt (sorted, deduplicated)."""
+    records = sorted({keyword.lower() for keyword in KEYWORDS})
+    with open(VERIFY_FILE, 'w') as f:
+        f.write('\n'.join(records))
+    print(f"Wrote {len(records)} rDNS keywords from {KEYWORDS_FILE} to {VERIFY_FILE}")
 
 def fetch_provider(provider, url):
     """Fetch and parse one provider. Returns (valid_ips, error); error is None on success."""
@@ -493,7 +434,6 @@ def main():
             all_ips.update(valid_ips)
             print(f"  Saved {len(valid_ips)} IPs for {provider}")
             results.append({"provider": provider, "status": "ok", "error": "", "count": len(valid_ips)})
-            verify_sample(provider, valid_ips)
             continue
 
         # Fetch or parse failed: keep the previous list so the whitelist does not shrink
@@ -516,6 +456,7 @@ def main():
         f.write('\n'.join(sorted_ips))
     print(f"Total distinct IPs saved: {len(sorted_ips)}")
 
+    write_verify_records()
     write_report(results, len(sorted_ips))
 
 if __name__ == "__main__":

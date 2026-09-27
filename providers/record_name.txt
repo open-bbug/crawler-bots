@@ -1,25 +1,40 @@
-google
-baidu
-bing
-msn
-commoncrawl
-yandex
-exabot
-facebook
-amazon
-datadog
+# Reverse-DNS hostname keywords for verifying crawler IPs.
+#
+# Manually maintained: this file is published as data/all_verify_record_name.txt
+# (sorted, deduplicated) on every run. Nothing here is added automatically.
+# One keyword per line; text after '#' is ignored.
+#
+# Only add a keyword after confirming the bot's reverse-DNS hostname, and prefer
+# specific domains: a keyword is a substring match, so a broad one such as
+# "amazon" (also matches *.amazonaws.com) or "google" (also matches
+# *.googleusercontent.com) lets cloud-hosted machines pass.
+
 ahrefs
+amazon
 apple
+applebot
 babbar
-dataforseo
-siteimprove
-seekport
-duckduckgo
-semrush
-qwant
-jike
-openai
-gptbot
-chatgpt-user
-uptimerobot
+facebook
+google
+googlebot
+msn
 pingdom
+uptimerobot
+yandex
+
+# Candidates (not verified yet; uncomment after confirming the rDNS domain):
+# baidu
+# bing
+# chatgpt-user
+# commoncrawl
+# datadog
+# dataforseo
+# duckduckgo
+# exabot
+# gptbot
+# jike
+# openai
+# qwant
+# semrush
+# seekport
+# siteimprove

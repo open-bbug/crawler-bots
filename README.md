@@ -67,10 +67,11 @@ Each provider in [`providers/providers.txt`](providers/providers.txt) writes its
 ```
 ├── data/                  # Generated IP lists
 │   ├── all_ip_whitelist.txt
+│   ├── all_verify_record_name.txt  # Copy of providers/record_name.txt
 │   └── <provider>.txt
 ├── providers/             # Configuration
 │   ├── providers.txt      # List of provider URLs
-│   └── record_name.txt    # Verification keywords
+│   └── record_name.txt    # rDNS verification keywords (manually maintained)
 ├── scripts/
 │   └── update_ips.py      # Main fetcher script
 ├── .github/
@@ -122,7 +123,7 @@ If a provider cannot be fetched or its response yields no valid IPs, the script 
 
 To add a new provider:
 1. Add the provider and its URL to `providers/providers.txt` (format: `provider_name=https://url...`).
-2. Add verification keywords to `providers/record_name.txt` if needed.
+2. If the bot has a confirmed reverse-DNS domain, add its keyword to `providers/record_name.txt` (manually maintained; published as `data/all_verify_record_name.txt`).
 3. In `scripts/update_ips.py`:
     - Implement a `parse_<provider>` function (or reuse `parse_prefixes` for the standard `{"prefixes": [{"ipv4Prefix": ...}]}` format).
     - Add the parser to the `PARSERS` dictionary.
