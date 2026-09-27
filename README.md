@@ -10,35 +10,57 @@ This project automates the retrieval and maintenance of IP whitelists for major 
 
 ## Supported Providers
 
-| Provider | Source Type | Status |
-|----------|-------------|--------|
-| Facebook | Geofeed/HTML | Active |
-| Google | JSON | Active |
-| Bing | JSON | Active |
-| DuckDuckGo | JSON | Active |
-| Ahrefs | JSON | Active |
-| CommonCrawl | JSON | Active |
-| Telegram | CIDR Text | Active |
-| UptimeRobot | Text | Active |
-| Pingdom | Text | Active |
-| OpenAI SearchBot | JSON | Active |
-| GPTBot | JSON | Active |
-| ChatGPT User | JSON | Active |
-| AmazonBot | JSON (HTML Embedded) | Active |
-| Amzn-SearchBot | JSON (HTML Embedded) | Active |
-| Amzn-User | JSON (HTML Embedded) | Active |
-| AppleBot | JSON | Active |
-| Barkrowler | JSON | Active |
-| Seekport | Text | Active |
-| ClaudeBot / Claude-User / Claude-SearchBot | JSON | Active |
-| PerplexityBot | JSON | Active |
-| Perplexity-User | JSON | Active |
-| MistralAI-User | JSON | Active |
-| MistralAI-Index | JSON | Active |
-| DuckAssistBot | JSON | Active |
-| Google Special Crawlers (GoogleOther, Google-CloudVertexBot) | JSON | Active |
-| Google User-Triggered Fetchers (Google-NotebookLM, GoogleAgent-Mariner) | JSON | Active |
-| Yandex | HTML | Active |
+Each provider in [`providers/providers.txt`](providers/providers.txt) writes its own `data/<provider>.txt`; all of them are merged into `data/all_ip_whitelist.txt`.
+
+### Search Engine Crawlers
+
+| Provider | Bots / User-Agents | Data File | Source Type | Status |
+|----------|--------------------|-----------|-------------|--------|
+| Google | Googlebot, Google-Extended | `google.txt` | JSON | Active |
+| Google Special Crawlers | GoogleOther, Google-CloudVertexBot, Google-Firebase | `google-special.txt` | JSON | Active |
+| Bing | bingbot, BingPreview (also used by Copilot) | `bing.txt` | JSON | Active |
+| DuckDuckGo | DuckDuckBot | `duckduckgo.txt` | JSON | Active |
+| Yandex | YandexBot (all Yandex-owned ranges) | `yandex.txt` | HTML | Active |
+| Apple | Applebot, Applebot-Extended | `applebot.txt` | JSON | Active |
+| Amazon | Amazonbot | `amazonbot.txt` | JSON (HTML embedded) | Active |
+| Amazon | Amzn-SearchBot | `amzn-searchbot.txt` | JSON (HTML embedded) | Active |
+| Seekport | SeekportBot | `seekport.txt` | Text | Active |
+
+### AI Crawlers & Agents
+
+| Provider | Bots / User-Agents | Data File | Source Type | Status |
+|----------|--------------------|-----------|-------------|--------|
+| OpenAI | OAI-SearchBot | `openai.txt` | JSON | Active |
+| OpenAI | GPTBot | `gptbot.txt` | JSON | Active |
+| OpenAI | ChatGPT-User | `chatgpt-user.txt` | JSON | Active |
+| Anthropic | ClaudeBot, Claude-User, Claude-SearchBot | `claudebot.txt` | JSON | Active |
+| Perplexity | PerplexityBot | `perplexitybot.txt` | JSON | Active |
+| Perplexity | Perplexity-User | `perplexity-user.txt` | JSON | Active |
+| Mistral AI | MistralAI-User | `mistralai-user.txt` | JSON | Active |
+| Mistral AI | MistralAI-Index | `mistralai-index.txt` | JSON | Active |
+| DuckDuckGo | DuckAssistBot | `duckassistbot.txt` | JSON | Active |
+| Google User-Triggered Fetchers | Google-NotebookLM, GoogleAgent-Mariner, FeedFetcher-Google | `google-user-fetchers.txt` | JSON | Active |
+| Google User-Triggered Fetchers (Google) | Google-NotebookLM, GoogleAgent-Mariner, Google-Site-Verification | `google-user-fetchers-google.txt` | JSON | Active |
+| Amazon | Amzn-User | `amzn-user.txt` | JSON (HTML embedded) | Active |
+| Common Crawl | CCBot | `commoncrawl.txt` | JSON | Active |
+
+### SEO & Other Crawlers
+
+| Provider | Bots / User-Agents | Data File | Source Type | Status |
+|----------|--------------------|-----------|-------------|--------|
+| Ahrefs | AhrefsBot, AhrefsSiteAudit | `ahrefs.txt` | JSON | Active |
+| Babbar | Barkrowler | `barkrowler.txt` | JSON | Active |
+| Facebook / Meta | facebookexternalhit, meta-externalagent | `facebook.txt` | Geofeed (CSV) | Active |
+| Telegram | TelegramBot (link previews) | `telegram.txt` | CIDR Text | Active |
+
+### Uptime Monitoring
+
+| Provider | Bots / User-Agents | Data File | Source Type | Status |
+|----------|--------------------|-----------|-------------|--------|
+| UptimeRobot | UptimeRobot | `uptimerobot.txt` | Text | Active |
+| Pingdom | Pingdom.com_bot | `pingdom.txt` | Text | Active |
+
+> **Note:** The Yandex list covers all Yandex-owned networks, not only YandexBot, and the Facebook geofeed covers all Meta networks (IPv4 only). The Google user-triggered fetcher and Amazon lists are large and change often.
 
 ## Project Structure
 
