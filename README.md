@@ -73,8 +73,10 @@ Each provider in [`providers/providers.txt`](providers/providers.txt) writes its
 │   └── record_name.txt    # Verification keywords
 ├── scripts/
 │   └── update_ips.py      # Main fetcher script
-├── .github/workflows/
-│   └── update_ips.yml     # Weekly automation workflow
+├── .github/
+│   ├── dependabot.yml     # Weekly GitHub Actions version updates
+│   └── workflows/
+│       └── update_ips.yml # Weekly automation workflow
 └── README.md
 ```
 
@@ -111,6 +113,8 @@ The project includes a GitHub Action ([`.github/workflows/update_ips.yml`](.gith
 - Runs **every Monday at 00:00 UTC**.
 - Executes the update script.
 - Creates a Pull Request with any changes to the IP lists.
+
+[Dependabot](.github/dependabot.yml) checks the GitHub Actions used by the workflow every Monday and opens a single grouped PR when newer versions are available.
 
 ## Contributing
 
