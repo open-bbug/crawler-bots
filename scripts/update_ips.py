@@ -140,16 +140,18 @@ def parse_telegram(content):
     return ips
 
 def parse_yandex(content):
-    # Yandex often returns HTML.
-    ips = []
-    if "<!DOCTYPE html>" in content or "<html" in content:
-         print("Yandex returned HTML. Skipping (needs manual check or specialized scraper).")
-         return []
-    # If raw lines
-    for line in content.splitlines():
-        line = line.strip()
-        if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:/\d{1,2})?$', line):
-            ips.append(line)
+    # https://yandex.com/ips is an HTML page listing Yandex's CIDR ranges (IPv4 and IPv6).
+    # Strip the markup and collect every CIDR; require an explicit /prefix so stray numbers
+    # on the page are not picked up.
+    text = html.unescape(re.sub(r'<[^>]+>', ' ', content)).replace('\\/', '/')
+    candidates = re.findall(r'\b\d{1,3}(?:\.\d{1,3}){3}/\d{1,2}\b', text)
+    candidates += re.findall(r'(?<![\w:])[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{0,4}){1,7}/\d{1,3}\b', text)
+    ips = [ip for ip in dict.fromkeys(candidates) if validate_ip(ip)]
+    if not ips:
+        if re.search(r'showcaptcha|smartcaptcha', content, re.I):
+            print("Yandex: returned a captcha page, no CIDR ranges found.")
+        else:
+            print("Yandex: no CIDR ranges found in page (format may have changed).")
     return ips
 
 def parse_uptimerobot(content):
