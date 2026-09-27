@@ -38,7 +38,7 @@ This project automates the retrieval and maintenance of IP whitelists for major 
 | DuckAssistBot | JSON | Active |
 | Google Special Crawlers (GoogleOther, Google-CloudVertexBot) | JSON | Active |
 | Google User-Triggered Fetchers (Google-NotebookLM, GoogleAgent-Mariner) | JSON | Active |
-| Yandex | HTML | Skipped (HTML parsing/protection) |
+| Yandex | HTML | Active |
 
 ## Project Structure
 
