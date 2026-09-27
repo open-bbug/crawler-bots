@@ -25,6 +25,8 @@ This project automates the retrieval and maintenance of IP whitelists for major 
 | GPTBot | JSON | Active |
 | ChatGPT User | JSON | Active |
 | AmazonBot | JSON (HTML Embedded) | Active |
+| Amzn-SearchBot | JSON (HTML Embedded) | Active |
+| Amzn-User | JSON (HTML Embedded) | Active |
 | AppleBot | JSON | Active |
 | Barkrowler | JSON | Active |
 | Seekport | Text | Active |
