@@ -9,3 +9,4 @@ googlebot
 msn
 pingdom
 uptimerobot
+yandex
