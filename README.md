@@ -58,9 +58,10 @@ Each provider in [`providers/providers.txt`](providers/providers.txt) writes its
 | Provider | Bots / User-Agents | Data File | Source Type | Status |
 |----------|--------------------|-----------|-------------|--------|
 | UptimeRobot | UptimeRobot | `uptimerobot.txt` | Text | Active |
-| Pingdom | Pingdom.com_bot | `pingdom.txt` | Text | Active |
+| Pingdom | Pingdom.com_bot (IPv4 probes) | `pingdom.txt` | Text | Active |
+| Pingdom | Pingdom.com_bot (IPv6 probes) | `pingdom-ipv6.txt` | Text | Active |
 
-> **Note:** The Yandex list covers all Yandex-owned networks, not only YandexBot, and the Facebook geofeed covers all Meta networks (IPv4 only). The Google user-triggered fetcher and Amazon lists are large and change often.
+> **Note:** The Yandex list covers all Yandex-owned networks, not only YandexBot, and the Facebook geofeed covers all Meta networks. The Google user-triggered fetcher and Amazon lists are large and change often.
 
 ## Project Structure
 

@@ -60,19 +60,20 @@ def fetch_url(url):
         return None, str(e)
 
 def parse_facebook(content):
-    # Facebook provides a format like: CSV or similar.
-    # If the URL is an HTML page (likely), we might need regex if it's simple valid data embedded.
-    # However, strict 'geofeed' usually implies CSV: start_ip, state, country, city, zip
-    # Let's try to parse as CIDR lines if possible, or return empty if HTML.
-    ips = []
+    # Geofeed (RFC 8805) CSV: ip_prefix,country,region,city,postal_code; '#' starts a comment.
+    # The prefix column holds both IPv4 and IPv6 ranges.
     if "<!DOCTYPE html>" in content or "<html" in content:
         print("Facebook returned HTML. Skipping (needs manual check or specialized scraper).")
         return []
-    
-    # Heuristic: look for CIDR patterns
-    cidr_pattern = r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2}'
-    ips.extend(re.findall(cidr_pattern, content))
-    return ips
+    ips = []
+    for line in content.splitlines():
+        line = line.split('#', 1)[0].strip()
+        if not line:
+            continue
+        prefix = line.split(',', 1)[0].strip()
+        if validate_ip(prefix):
+            ips.append(prefix)
+    return list(dict.fromkeys(ips))
 
 def parse_yandex(content):
     # https://yandex.com/ips is an HTML page listing Yandex's CIDR ranges (IPv4 and IPv6).
@@ -177,6 +178,7 @@ PARSERS = {
     "yandex": parse_yandex,
     "uptimerobot": parse_plain_ips,
     "pingdom": parse_plain_ips,
+    "pingdom-ipv6": parse_plain_ips,
     "openai": parse_prefixes,
     "gptbot": parse_prefixes,
     "chatgpt-user": parse_prefixes,
