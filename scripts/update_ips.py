@@ -204,7 +204,8 @@ def parse_chatgpt_user(content):
     return ips
 
 def parse_amazonbot(content):
-    # Amazon publishes the IP list inside an HTML page (https://developer.amazon.com/amazonbot).
+    # Amazon publishes each IP list inside an HTML page under https://developer.amazon.com/amazonbot/
+    # (ip-addresses/, searchbot-ip-addresses/, live-ip-addresses/); there is no raw JSON endpoint.
     # The JSON sits in a code block and is usually HTML-escaped (&quot;), and the page also
     # contains CSS/JS braces, so we cannot simply take the text between the first '{' and last '}'.
     ips = []
@@ -316,6 +317,8 @@ PARSERS = {
     "gptbot": parse_gptbot,
     "chatgpt-user": parse_chatgpt_user,
     "amazonbot": parse_amazonbot,
+    "amzn-searchbot": parse_amazonbot,
+    "amzn-user": parse_amazonbot,
     "applebot": parse_applebot,
     "barkrowler": parse_barkrowler,
     "seekport": parse_seekport,
