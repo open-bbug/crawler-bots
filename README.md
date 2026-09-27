@@ -125,5 +125,7 @@ To add a new provider:
 1. Add the provider and its URL to `providers/providers.txt` (format: `provider_name=https://url...`).
 2. If the bot has a confirmed reverse-DNS domain, add its keyword to `providers/record_name.txt` (manually maintained; published as `data/all_verify_record_name.txt`).
 3. In `scripts/update_ips.py`:
-    - Implement a `parse_<provider>` function (or reuse `parse_prefixes` for the standard `{"prefixes": [{"ipv4Prefix": ...}]}` format).
-    - Add the parser to the `PARSERS` dictionary.
+    - Map the provider to a parser in the `PARSERS` dictionary. Reuse a shared parser when the format fits:
+      - `parse_prefixes` for the standard `{"prefixes": [{"ipv4Prefix": ...}, {"ipv6Prefix": ...}]}` JSON.
+      - `parse_plain_ips` for plain text with one IP or CIDR per line.
+    - Only write a new `parse_<provider>` function for formats neither covers.

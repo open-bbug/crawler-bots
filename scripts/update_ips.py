@@ -74,62 +74,6 @@ def parse_facebook(content):
     ips.extend(re.findall(cidr_pattern, content))
     return ips
 
-def parse_google(content):
-    data = json.loads(content)
-    ips = []
-    if "prefixes" in data:
-        for item in data["prefixes"]:
-            if "ipv4Prefix" in item:
-                ips.append(item["ipv4Prefix"])
-            if "ipv6Prefix" in item:
-                ips.append(item["ipv6Prefix"])
-    return ips
-
-def parse_bing(content):
-    data = json.loads(content)
-    ips = []
-    if "prefixes" in data:
-        for item in data["prefixes"]:
-            if "ipv4Prefix" in item:
-                ips.append(item["ipv4Prefix"])
-            if "ipv6Prefix" in item:
-                ips.append(item["ipv6Prefix"])
-    return ips
-
-def parse_duckduckgo(content):
-    data = json.loads(content)
-    ips = []
-    if "prefixes" in data:
-        for item in data["prefixes"]:
-            if "ipv4Prefix" in item:
-                ips.append(item["ipv4Prefix"])
-            if "ipv6Prefix" in item:
-                ips.append(item["ipv6Prefix"])
-    return ips
-
-def parse_ahrefs(content):
-    data = json.loads(content)
-    ips = []
-    if "prefixes" in data:
-        for item in data["prefixes"]:
-            if "ipv4Prefix" in item:
-                ips.append(item["ipv4Prefix"])
-            if "ipv6Prefix" in item:
-                ips.append(item["ipv6Prefix"])
-    return ips
-
-def parse_commoncrawl(content):
-    data = json.loads(content)
-    ips = []
-    if "prefixes" in data:
-        # According to standard structure
-        for item in data["prefixes"]:
-            if "ipv4Prefix" in item:
-                ips.append(item["ipv4Prefix"])
-            if "ipv6Prefix" in item:
-                 ips.append(item["ipv6Prefix"])
-    return ips
-
 def parse_telegram(content):
     ips = []
     for line in content.splitlines():
@@ -163,48 +107,6 @@ def parse_uptimerobot(content):
         if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:/\d{1,2})?$', line) or \
            re.match(r'^[a-fA-F0-9:]+(?:/\d{1,3})?$', line):
             ips.append(line)
-    return ips
-
-def parse_pingdom(content):
-    # Similar to others, list of IPs
-    ips = []
-    for line in content.splitlines():
-        line = line.strip()
-        if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', line):
-             ips.append(line)
-    return ips
-
-def parse_openai(content):
-    data = json.loads(content)
-    ips = []
-    if "prefixes" in data:
-        for item in data["prefixes"]:
-            if "ipv4Prefix" in item:
-                ips.append(item["ipv4Prefix"])
-            if "ipv6Prefix" in item:
-                ips.append(item["ipv6Prefix"])
-    return ips
-
-def parse_gptbot(content):
-    data = json.loads(content)
-    ips = []
-    if "prefixes" in data:
-        for item in data["prefixes"]:
-            if "ipv4Prefix" in item:
-                ips.append(item["ipv4Prefix"])
-            if "ipv6Prefix" in item:
-                ips.append(item["ipv6Prefix"])
-    return ips
-
-def parse_chatgpt_user(content):
-    data = json.loads(content)
-    ips = []
-    if "prefixes" in data:
-        for item in data["prefixes"]:
-            if "ipv4Prefix" in item:
-                ips.append(item["ipv4Prefix"])
-            if "ipv6Prefix" in item:
-                ips.append(item["ipv6Prefix"])
     return ips
 
 def parse_amazonbot(content):
@@ -245,35 +147,13 @@ def parse_amazonbot(content):
 
     return list(dict.fromkeys(ips))
 
-def parse_applebot(content):
-    data = json.loads(content)
-    ips = []
-    if "prefixes" in data:
-        for item in data["prefixes"]:
-            if "ipv4Prefix" in item:
-                ips.append(item["ipv4Prefix"])
-            if "ipv6Prefix" in item:
-                ips.append(item["ipv6Prefix"])
-    return ips
-
-def parse_barkrowler(content):
-    data = json.loads(content)
-    ips = []
-    if "prefixes" in data:
-        for item in data["prefixes"]:
-            if "ipv4Prefix" in item:
-                ips.append(item["ipv4Prefix"])
-            if "ipv6Prefix" in item:
-                ips.append(item["ipv6Prefix"])
-    return ips
-
-def parse_seekport(content):
-    # Plain text list of IPs
+def parse_plain_ips(content):
+    # Plain text list with one IP or CIDR (IPv4 or IPv6) per line; other lines are ignored
     ips = []
     for line in content.splitlines():
         line = line.strip()
-        if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', line):
-             ips.append(line)
+        if line and validate_ip(line):
+            ips.append(line)
     return ips
 
 def parse_prefixes(content):
@@ -308,24 +188,24 @@ def parse_claudebot(content):
 
 PARSERS = {
     "facebook": parse_facebook,
-    "google": parse_google,
-    "bing": parse_bing,
-    "duckduckgo": parse_duckduckgo,
-    "ahrefs": parse_ahrefs,
-    "commoncrawl": parse_commoncrawl,
+    "google": parse_prefixes,
+    "bing": parse_prefixes,
+    "duckduckgo": parse_prefixes,
+    "ahrefs": parse_prefixes,
+    "commoncrawl": parse_prefixes,
     "telegram": parse_telegram,
     "yandex": parse_yandex,
     "uptimerobot": parse_uptimerobot,
-    "pingdom": parse_pingdom,
-    "openai": parse_openai,
-    "gptbot": parse_gptbot,
-    "chatgpt-user": parse_chatgpt_user,
+    "pingdom": parse_plain_ips,
+    "openai": parse_prefixes,
+    "gptbot": parse_prefixes,
+    "chatgpt-user": parse_prefixes,
     "amazonbot": parse_amazonbot,
     "amzn-searchbot": parse_amazonbot,
     "amzn-user": parse_amazonbot,
-    "applebot": parse_applebot,
-    "barkrowler": parse_barkrowler,
-    "seekport": parse_seekport,
+    "applebot": parse_prefixes,
+    "barkrowler": parse_prefixes,
+    "seekport": parse_plain_ips,
     "claudebot": parse_claudebot,
     "perplexitybot": parse_prefixes,
     "perplexity-user": parse_prefixes,
