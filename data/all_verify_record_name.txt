@@ -6,6 +6,7 @@ babbar
 facebook
 google.com
 googlebot
+mistral
 msn
 pingdom
 uptimerobot

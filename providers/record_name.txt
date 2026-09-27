@@ -17,6 +17,7 @@ babbar
 facebook
 google.com   # Google special crawlers / fetchers: *.google.com
 googlebot
+mistral      # Mistral AI rDNS: crawlers.mistral.ai
 msn
 pingdom
 uptimerobot
