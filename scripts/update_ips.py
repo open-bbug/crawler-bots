@@ -46,16 +46,17 @@ PROVIDERS = load_providers(PROVIDERS_FILE)
 KEYWORDS = load_keywords(KEYWORDS_FILE)
 
 def fetch_url(url):
+    """Return (text, error); error is None on success."""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (compatible; BotWhitelistUpdater/1.0; +https://github.com/your-repo)'
         }
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
-        return response.text
+        return response.text, None
     except Exception as e:
         print(f"Error fetching {url}: {e}")
-        return None
+        return None, str(e)
 
 def parse_facebook(content):
     # Facebook provides a format like: CSV or similar.
@@ -393,66 +394,129 @@ def verify_ip(ip_address):
         print(f"Error verifying IP {ip_address}: {e}")
         return []
 
+def verify_sample(provider, valid_ips):
+    # Verify one random IP from the first entry to extract reverse-DNS keywords
+    try:
+        first_entry = valid_ips[0]
+        net = ipaddress.ip_network(first_entry, strict=False)
+        # Pick a random IP from the subnet (single IPs /32 or /128 have one address)
+        num_addrs = net.num_addresses
+        if num_addrs > 1:
+            target_ip = str(net[random.randint(0, num_addrs - 1)])
+        else:
+            target_ip = str(net.network_address)
+        print(f"  Verifying random sample IP: {target_ip} (from {first_entry})...")
+        verify_ip(target_ip)
+    except Exception as e:
+        print(f"  Error verifying first IP for {provider}: {e}")
+
+def fetch_provider(provider, url):
+    """Fetch and parse one provider. Returns (valid_ips, error); error is None on success."""
+    content, fetch_error = fetch_url(url)
+    if fetch_error:
+        return [], f"fetch failed: {fetch_error}"
+    if not content:
+        return [], "fetch failed: empty response"
+    parser = PARSERS.get(provider)
+    if not parser:
+        return [], "no parser"
+    try:
+        ips = parser(content)
+    except Exception as e:
+        return [], f"parse error: {e}"
+    valid_ips = [ip for ip in ips if validate_ip(ip)]
+    if not valid_ips:
+        return [], "no valid IPs in response"
+    return valid_ips, None
+
+def load_existing(filename):
+    """Read a previously saved provider list, keeping only valid entries."""
+    if not os.path.exists(filename):
+        return []
+    with open(filename, 'r') as f:
+        return [line.strip() for line in f if line.strip() and validate_ip(line.strip())]
+
+def annotate(level, title, message):
+    # Emit a GitHub Actions annotation so problems show up on the run summary page
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        message = message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+        print(f"::{level} title={title}::{message}")
+
+def write_report(results, total):
+    """Write a Markdown report to the Actions job summary and to UPDATE_REPORT_PATH (used as PR body)."""
+    problems = [r for r in results if r["status"] != "ok"]
+    lines = ["## Crawler bot IP update", ""]
+    lines.append(f"- Providers: {len(results)} "
+                 f"(ok: {sum(r['status'] == 'ok' for r in results)}, "
+                 f"fallback: {sum(r['status'] == 'fallback' for r in results)}, "
+                 f"failed: {sum(r['status'] == 'failed' for r in results)})")
+    lines.append(f"- Total distinct IPs in `data/all_ip_whitelist.txt`: {total}")
+    lines.append("")
+    if problems:
+        lines += ["### Providers not updated", "",
+                  "Fallback providers kept their previous `data/<provider>.txt`, which is still included in the whitelist.", "",
+                  "| Provider | Status | Reason | IPs used |",
+                  "|----------|--------|--------|----------|"]
+        for r in problems:
+            reason = " ".join(r["error"].split()).replace("|", "\\|")
+            lines.append(f"| {r['provider']} | {r['status']} | {reason} | {r['count']} |")
+    else:
+        lines.append("All providers were fetched successfully.")
+    lines += ["", "<details><summary>All providers</summary>", "",
+              "| Provider | Status | IPs |", "|----------|--------|-----|"]
+    for r in results:
+        lines.append(f"| {r['provider']} | {r['status']} | {r['count']} |")
+    lines += ["", "</details>", ""]
+    report = "\n".join(lines)
+
+    for env_var in ("GITHUB_STEP_SUMMARY", "UPDATE_REPORT_PATH"):
+        path = os.environ.get(env_var)
+        if path:
+            with open(path, 'a') as f:
+                f.write(report)
+
 def main():
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
-    
+
     all_ips = set()
+    results = []
 
     for provider, url in PROVIDERS.items():
         print(f"Processing {provider}...")
-        content = fetch_url(url)
-        if content:
-            parser = PARSERS.get(provider)
-            if parser:
-                try:
-                    ips = parser(content)
-                    valid_ips = [ip for ip in ips if validate_ip(ip)]
-                    
-                    if valid_ips:
-                        # Write individual file
-                        filename = os.path.join(DATA_DIR, f"{provider}.txt")
-                        with open(filename, 'w') as f:
-                            f.write('\n'.join(valid_ips))
-                        
-                        all_ips.update(valid_ips)
-                        print(f"  Saved {len(valid_ips)} IPs for {provider}")
-                        
-                        # Verify the first IP to extract keywords
-                        try:
-                            first_entry = valid_ips[0]
-                            # Handle CIDR to get a single random IP address
-                            net = ipaddress.ip_network(first_entry, strict=False)
-                            
-                            # Pick a random IP from the subnet
-                            # If it's a single IP (/32 or /128), num_addresses is 1, returns index 0
-                            # For larger subnets, this gives us a random host.
-                            num_addrs = net.num_addresses
-                            if num_addrs > 1:
-                                random_index = random.randint(0, num_addrs - 1)
-                                target_ip = str(net[random_index])
-                            else:
-                                target_ip = str(net.network_address)
-                            
-                            print(f"  Verifying random sample IP: {target_ip} (from {first_entry})...")
-                            verify_ip(target_ip)
-                        except Exception as e:
-                            print(f"  Error verifying first IP for {provider}: {e}")
+        filename = os.path.join(DATA_DIR, f"{provider}.txt")
+        valid_ips, error = fetch_provider(provider, url)
 
-                    else:
-                        print(f"  No valid IPs found for {provider}")
-                except Exception as e:
-                    print(f"  Error parsing {provider}: {e}")
-            else:
-                 print(f"  No parser for {provider}")
+        if error is None:
+            with open(filename, 'w') as f:
+                f.write('\n'.join(valid_ips))
+            all_ips.update(valid_ips)
+            print(f"  Saved {len(valid_ips)} IPs for {provider}")
+            results.append({"provider": provider, "status": "ok", "error": "", "count": len(valid_ips)})
+            verify_sample(provider, valid_ips)
+            continue
+
+        # Fetch or parse failed: keep the previous list so the whitelist does not shrink
+        existing = load_existing(filename)
+        if existing:
+            all_ips.update(existing)
+            print(f"  {error}; using {len(existing)} IPs from existing {filename}")
+            annotate("warning", f"{provider} not updated",
+                     f"{error}; kept {len(existing)} IPs from previous {filename}")
+            results.append({"provider": provider, "status": "fallback", "error": error, "count": len(existing)})
         else:
-            print(f"  Failed to fetch content for {provider}")
+            print(f"  {error}; no existing data for {provider}")
+            annotate("error", f"{provider} failed",
+                     f"{error}; no previous data, provider missing from whitelist")
+            results.append({"provider": provider, "status": "failed", "error": error, "count": 0})
 
     # Write all IPs
     sorted_ips = sorted(list(all_ips))
     with open(ALL_IPS_FILE, 'w') as f:
         f.write('\n'.join(sorted_ips))
     print(f"Total distinct IPs saved: {len(sorted_ips)}")
+
+    write_report(results, len(sorted_ips))
 
 if __name__ == "__main__":
     main()

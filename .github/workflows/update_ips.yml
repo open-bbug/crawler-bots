@@ -22,7 +22,17 @@ jobs:
           cache-dependency-glob: ""
 
       - name: Run update script
-        run: uv run scripts/update_ips.py
+        env:
+          # Report of fetched / fallback / failed providers, also written to the job summary
+          UPDATE_REPORT_PATH: ${{ runner.temp }}/update_report.md
+        run: |
+          {
+            echo "Automated update of crawler bot IP whitelists."
+            echo
+            echo "This PR updates the IP lists in \`data/\` based on the latest data from providers."
+            echo
+          } > "$UPDATE_REPORT_PATH"
+          uv run scripts/update_ips.py
 
       - name: Check for changes
         id: git_diff
@@ -40,9 +50,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore: update crawler bot IP whitelist"
           title: "chore: update crawler bot IP whitelist"
-          body: |
-            Automated update of crawler bot IP whitelists.
-            
-            This PR updates the IP lists in `data/` based on the latest data from providers.
+          body-path: ${{ runner.temp }}/update_report.md
           branch: update-crawler-ips
           delete-branch: true
