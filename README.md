@@ -116,7 +116,7 @@ The project includes a GitHub Action ([`.github/workflows/update_ips.yml`](.gith
 - Executes the update script.
 - Creates a Pull Request with any changes to the IP lists.
 
-If a provider cannot be fetched or its response yields no valid IPs, the script keeps the previous `data/<provider>.txt` and still includes it in `data/all_ip_whitelist.txt`, so a temporary outage never shrinks the whitelist. Each run reports which providers were updated, fell back, or failed as warning/error annotations, in the job summary, and in the Pull Request description.
+If a provider cannot be fetched or its response yields no valid IPs, the script keeps the previous `data/<provider>.txt` and still includes it in `data/all_ip_whitelist.txt`, so a temporary outage never shrinks the whitelist. Each run reports which providers were updated, fell back, or failed as warning/error annotations, in the job summary, and in the Pull Request description. If any provider was not updated, the script exits with code 2: the workflow still opens the Pull Request with the other updates, then marks the run as failed so the problem is visible.
 
 [Dependabot](.github/dependabot.yml) checks the GitHub Actions used by the workflow every Monday and opens a single grouped PR when newer versions are available.
 

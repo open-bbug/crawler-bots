@@ -2,24 +2,34 @@
 # requires-python = ">=3.12"
 # dependencies = [
 #     "requests>=2.32.5",
+#     "urllib3>=1.26",
 # ]
 # ///
 
-import requests
-import json
 import html
-import os
 import ipaddress
+import json
+import os
 import re
+import sys
 
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
-# Configuration
 # Configuration
 DATA_DIR = "data"
 PROVIDERS_FILE = "providers/providers.txt"
 KEYWORDS_FILE = "providers/record_name.txt"
 ALL_IPS_FILE = os.path.join(DATA_DIR, "all_ip_whitelist.txt")
 VERIFY_FILE = os.path.join(DATA_DIR, "all_verify_record_name.txt")
+
+USER_AGENT = "Mozilla/5.0 (compatible; BotWhitelistUpdater/1.0; +https://github.com/open-bbug/crawler-bots)"
+# (connect, read) timeouts in seconds; some provider pages are large
+REQUEST_TIMEOUT = (10, 30)
+# Exit code when at least one provider could not be updated (fallback or failed)
+EXIT_PROVIDER_FAILURES = 2
+
 
 def load_providers(filename):
     providers = {}
@@ -33,6 +43,7 @@ def load_providers(filename):
                         providers[parts[0].strip()] = parts[1].strip()
     return providers
 
+
 def load_keywords(filename):
     keywords = []
     if os.path.exists(filename):
@@ -43,21 +54,41 @@ def load_keywords(filename):
                     keywords.append(line)
     return keywords
 
+
 PROVIDERS = load_providers(PROVIDERS_FILE)
 KEYWORDS = load_keywords(KEYWORDS_FILE)
+
+
+def build_session():
+    """HTTP session that retries connection errors, 429 and 5xx responses with exponential backoff."""
+    retry = Retry(
+        total=3,
+        backoff_factor=2,  # urllib3 2.x: retry at once, then wait 4s and 8s
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=frozenset(["GET"]),
+        respect_retry_after_header=True,
+    )
+    session = requests.Session()
+    session.headers["User-Agent"] = USER_AGENT
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
+
+SESSION = build_session()
+
 
 def fetch_url(url):
     """Return (text, error); error is None on success."""
     try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (compatible; BotWhitelistUpdater/1.0; +https://github.com/your-repo)'
-        }
-        response = requests.get(url, headers=headers, timeout=10)
+        response = SESSION.get(url, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         return response.text, None
     except Exception as e:
         print(f"Error fetching {url}: {e}")
         return None, str(e)
+
 
 def parse_facebook(content):
     # Geofeed (RFC 8805) CSV: ip_prefix,country,region,city,postal_code; '#' starts a comment.
@@ -75,6 +106,7 @@ def parse_facebook(content):
             ips.append(prefix)
     return list(dict.fromkeys(ips))
 
+
 def parse_yandex(content):
     # https://yandex.com/ips is an HTML page listing Yandex's CIDR ranges (IPv4 and IPv6).
     # Strip the markup and collect every CIDR; require an explicit /prefix so stray numbers
@@ -89,6 +121,7 @@ def parse_yandex(content):
         else:
             print("Yandex: no CIDR ranges found in page (format may have changed).")
     return ips
+
 
 def parse_amazonbot(content):
     # Amazon publishes each IP list inside an HTML page under https://developer.amazon.com/amazonbot/
@@ -128,6 +161,7 @@ def parse_amazonbot(content):
 
     return list(dict.fromkeys(ips))
 
+
 def parse_plain_ips(content):
     # Plain text list with one IP or CIDR (IPv4 or IPv6) per line; other lines are ignored
     ips = []
@@ -136,6 +170,7 @@ def parse_plain_ips(content):
         if line and validate_ip(line):
             ips.append(line)
     return ips
+
 
 def parse_prefixes(content):
     # Standard Google-style format: {"prefixes": [{"ipv4Prefix": ...}, {"ipv6Prefix": ...}]}
@@ -148,6 +183,7 @@ def parse_prefixes(content):
             if "ipv6Prefix" in item:
                 ips.append(item["ipv6Prefix"])
     return ips
+
 
 def parse_claudebot(content):
     # Anthropic publishes one list covering ClaudeBot, Claude-User and Claude-SearchBot.
@@ -166,6 +202,7 @@ def parse_claudebot(content):
 
     walk(json.loads(content))
     return ips
+
 
 PARSERS = {
     "facebook": parse_facebook,
@@ -199,6 +236,7 @@ PARSERS = {
     "google-user-fetchers-google": parse_prefixes
 }
 
+
 def validate_ip(ip_str):
     try:
         ipaddress.ip_network(ip_str, strict=False)
@@ -206,12 +244,14 @@ def validate_ip(ip_str):
     except ValueError:
         return False
 
+
 def write_verify_records():
     """Publish the manually maintained rDNS keywords as data/all_verify_record_name.txt (sorted, deduplicated)."""
     records = sorted({keyword.lower() for keyword in KEYWORDS})
     with open(VERIFY_FILE, 'w') as f:
         f.write('\n'.join(records))
     print(f"Wrote {len(records)} rDNS keywords from {KEYWORDS_FILE} to {VERIFY_FILE}")
+
 
 def fetch_provider(provider, url):
     """Fetch and parse one provider. Returns (valid_ips, error); error is None on success."""
@@ -232,6 +272,7 @@ def fetch_provider(provider, url):
         return [], "no valid IPs in response"
     return valid_ips, None
 
+
 def load_existing(filename):
     """Read a previously saved provider list, keeping only valid entries."""
     if not os.path.exists(filename):
@@ -239,11 +280,13 @@ def load_existing(filename):
     with open(filename, 'r') as f:
         return [line.strip() for line in f if line.strip() and validate_ip(line.strip())]
 
+
 def annotate(level, title, message):
     # Emit a GitHub Actions annotation so problems show up on the run summary page
     if os.environ.get("GITHUB_ACTIONS") == "true":
         message = message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
         print(f"::{level} title={title}::{message}")
+
 
 def write_report(results, total):
     """Write a Markdown report to the Actions job summary and to UPDATE_REPORT_PATH (used as PR body)."""
@@ -277,6 +320,7 @@ def write_report(results, total):
         if path:
             with open(path, 'a') as f:
                 f.write(report)
+
 
 def main():
     if not os.path.exists(DATA_DIR):
@@ -320,6 +364,20 @@ def main():
 
     write_verify_records()
     write_report(results, len(sorted_ips))
+    return print_summary(results)
+
+
+def print_summary(results):
+    """Print the providers that were not updated; return the process exit code."""
+    problems = [r for r in results if r["status"] != "ok"]
+    print()
+    print(f"Summary: {len(results) - len(problems)}/{len(results)} providers updated")
+    if not problems:
+        return 0
+    for r in problems:
+        print(f"  [{r['status']}] {r['provider']}: {r['error']} (IPs used: {r['count']})")
+    return EXIT_PROVIDER_FAILURES
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
