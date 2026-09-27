@@ -7,6 +7,7 @@
 
 import requests
 import json
+import html
 import os
 import ipaddress
 import re
@@ -203,29 +204,41 @@ def parse_chatgpt_user(content):
     return ips
 
 def parse_amazonbot(content):
-    # Amazon provides a webpage with JSON inside a code block.
-    # We need to extract the JSON string.
+    # Amazon publishes the IP list inside an HTML page (https://developer.amazon.com/amazonbot).
+    # The JSON sits in a code block and is usually HTML-escaped (&quot;), and the page also
+    # contains CSS/JS braces, so we cannot simply take the text between the first '{' and last '}'.
     ips = []
-    # Find the JSON content between braces, possibly spanning lines.
-    # The chunk view shows it is inside a markdown code block ``` ... ```
-    # Let's try to extract relevant JSON structure.
-    try:
-        # Find start of JSON object
-        start_idx = content.find('{')
-        if start_idx != -1:
-            # Find the last closing brace
-            end_idx = content.rfind('}')
-            if end_idx != -1 and end_idx > start_idx:
-                json_candidate = content[start_idx:end_idx+1]
-                data = json.loads(json_candidate)
-                if "prefixes" in data:
-                    for item in data["prefixes"]:
-                        if "ip_prefix" in item:
-                            ips.append(item["ip_prefix"])
-    except (json.JSONDecodeError, ValueError) as e:
-        print(f"Error parsing Amazon JSON: {e}")
-        
-    return ips
+    text = html.unescape(re.sub(r'<[^>]+>', '', content))
+
+    # 1. Try every '{' as the start of a JSON object and keep the ones that hold "prefixes".
+    decoder = json.JSONDecoder()
+    for match in re.finditer(r'\{', text):
+        try:
+            data, _ = decoder.raw_decode(text, match.start())
+        except ValueError:
+            continue
+        if isinstance(data, dict) and isinstance(data.get("prefixes"), list):
+            for item in data["prefixes"]:
+                if not isinstance(item, dict):
+                    continue
+                for key in ("ip_prefix", "ipv6_prefix", "ipv4Prefix", "ipv6Prefix"):
+                    if key in item:
+                        ips.append(item[key])
+
+    # 2. Fallback: pick prefix values out of partial / non-strict JSON (e.g. trailing commas).
+    if not ips:
+        ips = re.findall(r'"(?:ip_prefix|ipv6_prefix|ipv4Prefix|ipv6Prefix)"\s*:\s*"([^"]+)"', text)
+
+    # 3. Fallback: plain IP / CIDR list inside <pre> or <code> blocks.
+    if not ips:
+        for block in re.findall(r'<(?:pre|code)[^>]*>(.*?)</(?:pre|code)>', content, re.S | re.I):
+            block = html.unescape(re.sub(r'<[^>]+>', ' ', block))
+            ips.extend(re.findall(r'\b\d{1,3}(?:\.\d{1,3}){3}(?:/\d{1,2})?\b', block))
+
+    if not ips:
+        print("Amazonbot: no IP prefixes found in page (format may have changed).")
+
+    return list(dict.fromkeys(ips))
 
 def parse_applebot(content):
     data = json.loads(content)
