@@ -58,19 +58,21 @@ Each provider in [`providers/providers.txt`](providers/providers.txt) writes its
 | Provider | Bots / User-Agents | Data File | Source Type | Status |
 |----------|--------------------|-----------|-------------|--------|
 | UptimeRobot | UptimeRobot | `uptimerobot.txt` | Text | Active |
-| Pingdom | Pingdom.com_bot | `pingdom.txt` | Text | Active |
+| Pingdom | Pingdom.com_bot (IPv4 probes) | `pingdom.txt` | Text | Active |
+| Pingdom | Pingdom.com_bot (IPv6 probes) | `pingdom-ipv6.txt` | Text | Active |
 
-> **Note:** The Yandex list covers all Yandex-owned networks, not only YandexBot, and the Facebook geofeed covers all Meta networks (IPv4 only). The Google user-triggered fetcher and Amazon lists are large and change often.
+> **Note:** The Yandex list covers all Yandex-owned networks, not only YandexBot, and the Facebook geofeed covers all Meta networks. The Google user-triggered fetcher and Amazon lists are large and change often.
 
 ## Project Structure
 
 ```
 ├── data/                  # Generated IP lists
 │   ├── all_ip_whitelist.txt
+│   ├── all_verify_record_name.txt  # Copy of providers/record_name.txt
 │   └── <provider>.txt
 ├── providers/             # Configuration
 │   ├── providers.txt      # List of provider URLs
-│   └── record_name.txt    # Verification keywords
+│   └── record_name.txt    # rDNS verification keywords (manually maintained)
 ├── scripts/
 │   └── update_ips.py      # Main fetcher script
 ├── .github/
@@ -114,13 +116,17 @@ The project includes a GitHub Action ([`.github/workflows/update_ips.yml`](.gith
 - Executes the update script.
 - Creates a Pull Request with any changes to the IP lists.
 
+If a provider cannot be fetched or its response yields no valid IPs, the script keeps the previous `data/<provider>.txt` and still includes it in `data/all_ip_whitelist.txt`, so a temporary outage never shrinks the whitelist. Each run reports which providers were updated, fell back, or failed as warning/error annotations, in the job summary, and in the Pull Request description. If any provider was not updated, the script exits with code 2: the workflow still opens the Pull Request with the other updates, then marks the run as failed so the problem is visible.
+
 [Dependabot](.github/dependabot.yml) checks the GitHub Actions used by the workflow every Monday and opens a single grouped PR when newer versions are available.
 
 ## Contributing
 
 To add a new provider:
 1. Add the provider and its URL to `providers/providers.txt` (format: `provider_name=https://url...`).
-2. Add verification keywords to `providers/record_name.txt` if needed.
+2. If the bot has a confirmed reverse-DNS domain, add its keyword to `providers/record_name.txt` (manually maintained; published as `data/all_verify_record_name.txt`).
 3. In `scripts/update_ips.py`:
-    - Implement a `parse_<provider>` function (or reuse `parse_prefixes` for the standard `{"prefixes": [{"ipv4Prefix": ...}]}` format).
-    - Add the parser to the `PARSERS` dictionary.
+    - Map the provider to a parser in the `PARSERS` dictionary. Reuse a shared parser when the format fits:
+      - `parse_prefixes` for the standard `{"prefixes": [{"ipv4Prefix": ...}, {"ipv6Prefix": ...}]}` JSON.
+      - `parse_plain_ips` for plain text with one IP or CIDR per line.
+    - Only write a new `parse_<provider>` function for formats neither covers.

@@ -1,11 +1,12 @@
 ahrefs
-amazon
+amazonbot
 apple
 applebot
 babbar
 facebook
-google
+google.com
 googlebot
+mistral
 msn
 pingdom
 uptimerobot

@@ -8,6 +8,7 @@ telegram=https://core.telegram.org/resources/cidr.txt
 yandex=https://yandex.com/ips
 uptimerobot=https://uptimerobot.com/inc/files/ips/IPv4andIPv6.txt
 pingdom=https://my.pingdom.com/probes/ipv4
+pingdom-ipv6=https://my.pingdom.com/probes/ipv6
 openai=https://openai.com/searchbot.json
 gptbot=https://openai.com/gptbot.json
 chatgpt-user=https://openai.com/chatgpt-user.json

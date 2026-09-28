@@ -24,3 +24,7 @@ AGENTS.md
 
 # Generated skills in any dot directory
 .*/skills/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
