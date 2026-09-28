@@ -63,6 +63,13 @@ Each provider in [`providers/providers.txt`](providers/providers.txt) writes its
 
 > **Note:** The Yandex list covers all Yandex-owned networks, not only YandexBot, and the Facebook geofeed covers all Meta networks. The Google user-triggered fetcher and Amazon lists are large and change often.
 
+## Output Format
+
+All IP files in `data/` use one entry per line, ending with a trailing newline:
+- Canonical CIDR notation; single addresses are written as `/32` (IPv4) or `/128` (IPv6).
+- Deduplicated and sorted numerically, IPv4 before IPv6.
+- Ranges are not merged, so each provider file still matches its source list.
+
 ## Project Structure
 
 ```

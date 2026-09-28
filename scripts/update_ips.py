@@ -245,11 +245,29 @@ def validate_ip(ip_str):
         return False
 
 
+def normalize_ips(entries):
+    """Return entries as canonical CIDR strings (bare IPs become /32 or /128), deduplicated,
+    sorted numerically with IPv4 before IPv6. Invalid entries are dropped."""
+    networks = set()
+    for entry in entries:
+        try:
+            networks.add(ipaddress.ip_network(entry.strip(), strict=False))
+        except ValueError:
+            continue
+    ordered = sorted(networks, key=lambda net: (net.version, net.network_address, net.prefixlen))
+    return [str(net) for net in ordered]
+
+
+def write_lines(path, lines):
+    """Write one item per line, ending with a trailing newline."""
+    with open(path, 'w') as f:
+        f.write(''.join(f"{line}\n" for line in lines))
+
+
 def write_verify_records():
     """Publish the manually maintained rDNS keywords as data/all_verify_record_name.txt (sorted, deduplicated)."""
     records = sorted({keyword.lower() for keyword in KEYWORDS})
-    with open(VERIFY_FILE, 'w') as f:
-        f.write('\n'.join(records))
+    write_lines(VERIFY_FILE, records)
     print(f"Wrote {len(records)} rDNS keywords from {KEYWORDS_FILE} to {VERIFY_FILE}")
 
 
@@ -267,18 +285,18 @@ def fetch_provider(provider, url):
         ips = parser(content)
     except Exception as e:
         return [], f"parse error: {e}"
-    valid_ips = [ip for ip in ips if validate_ip(ip)]
+    valid_ips = normalize_ips(ip for ip in ips if validate_ip(ip))
     if not valid_ips:
         return [], "no valid IPs in response"
     return valid_ips, None
 
 
 def load_existing(filename):
-    """Read a previously saved provider list, keeping only valid entries."""
+    """Read a previously saved provider list, keeping only valid entries (normalized)."""
     if not os.path.exists(filename):
         return []
     with open(filename, 'r') as f:
-        return [line.strip() for line in f if line.strip() and validate_ip(line.strip())]
+        return normalize_ips(line for line in f if line.strip())
 
 
 def annotate(level, title, message):
@@ -335,8 +353,7 @@ def main():
         valid_ips, error = fetch_provider(provider, url)
 
         if error is None:
-            with open(filename, 'w') as f:
-                f.write('\n'.join(valid_ips))
+            write_lines(filename, valid_ips)
             all_ips.update(valid_ips)
             print(f"  Saved {len(valid_ips)} IPs for {provider}")
             results.append({"provider": provider, "status": "ok", "error": "", "count": len(valid_ips)})
@@ -357,9 +374,8 @@ def main():
             results.append({"provider": provider, "status": "failed", "error": error, "count": 0})
 
     # Write all IPs
-    sorted_ips = sorted(list(all_ips))
-    with open(ALL_IPS_FILE, 'w') as f:
-        f.write('\n'.join(sorted_ips))
+    sorted_ips = normalize_ips(all_ips)
+    write_lines(ALL_IPS_FILE, sorted_ips)
     print(f"Total distinct IPs saved: {len(sorted_ips)}")
 
     write_verify_records()
